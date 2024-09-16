@@ -1,39 +1,38 @@
 
-
-
 library(data.table)
 library(stringr)
 
-library(readxl)
+dir.create("dbs/inhouse/DAVIDLAB/r-curation")
 
-library(insect)
-
-
-extract_certh <- function(path) {
+extract_davidlab <- function(path) {
     
-    reads = path |> read_xlsx() |> setDT()
+    reads <- path |> readLines()
+    reads <- reads[which(str_sub(reads, 1, 1) == ">")] |> str_sub(2, -1)
     
-    # reads$Most_probable_seq = NULL
-    
-    reads$ID_sequence  = reads$ID_sequence |> str_remove_all("\\n")
-    reads$Marker       = reads$Marker |> str_remove_all("\\n")
-    reads$Organism     = reads$Organism |> str_remove_all("\\n")
-    reads$Taxonomy     = reads$Taxonomy |> str_remove_all("\\n")
-    reads$Area         = reads$Area |> str_remove_all("\\n")
+    reads = data.table(
+        "seqid" = reads |> str_split_i("\\ ", 1),
+        "organism" = reads |> str_split("\\ ", n = 2) |> lapply(function(q) q[2]) |> unlist()
+    )
     
     return(reads)
-    
 }
 
 
-## certh ----------------------------
-p   <- "dbs/inhouse/CERTH/Master_File_Total.xlsx"
-tax <- extract_certh(p)
+
+
+
+# workflow -------------------------------------------
+
+
+
+## davidlab ----------------------------
+p   <- "dbs/inhouse/DAVIDLAB/trnL.fasta"
+tax <- extract_davidlab(p)
 
 taxonomy_ncbi = taxonomy()
 
 
-taxids = get_taxID(tax$Organism, taxonomy_ncbi)
+taxids = get_taxID(tax$organism, taxonomy_ncbi)
 
 
 l = get_lineage(taxids, db = taxonomy_ncbi) |>
@@ -45,8 +44,9 @@ l = l[, c("index", "kingdom", "phylum", "class", "order", "family", "genus", "sp
 
 tax = cbind(tax, l[, 2:ncol(l)])
 
-colnames(tax)[1] = "seqid"
+tax$organism = NULL
 
+tax = tax[which(kingdom == "Viridiplantae")]
 
 tax$taxon_name = ifelse(
     !is.na(tax$species), tax$species,
@@ -82,44 +82,14 @@ tax$taxon_rank = ifelse(
     )
 )
 
-library(seqinr)
+
+f = read.fasta("dbs/inhouse/DAVIDLAB/trnL.fasta")
+
+f = f[tax$seqid]
 
 
-tax = tax |> split(tax$Marker)
-
-
-for(i in names(tax)) {
-    
-    write.fasta(
-        sequences = tax$Most_probable_seq |> as.list(),
-        names = tax$seqid |> as.list(),
-        file.out = paste0(dirname(p), "/", i, ".fasta")
-    )
-    
-    fwrite(
-        tax[[i]], file = paste0(dirname(p), "/", i, ".tax"),
-        row.names = FALSE, quote = FALSE, sep = "\t"
-    )
-    
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+write.fasta(f, names(f) |> as.list(), "dbs/inhouse/DAVIDLAB/r-curation/trnL.fasta", nbchar = 120)
+fwrite(tax, "dbs/inhouse/DAVIDLAB/r-curation/trnL.tax", row.names = FALSE, quote = FALSE, sep = "\t")
 
 
 

@@ -1,16 +1,30 @@
 
 
+# pip install pyfaidx
+# faidx UNITE_public_all_21.04.2024.fasta -g "k__Viridiplantae" > ITS.fasta
+# grep -e ">" ITS.fasta > ITS-headers.txt
+
 library(data.table)
 library(stringr)
 
+dir.create("dbs/UNITE/20240424/r-curation")
 
 
-tax = "dbs/UNITE/20240424/UNITE_public_all_21.04.2024_taxonomy.tsv" |> fread(header = TRUE)
+tax = "dbs/UNITE/20240424/ITS-headers.txt" |> readLines()
 
-tax[[2]] = NULL
+tax = tax |> str_split("\\|", simplify = TRUE) |> as.data.frame() |> setDT()
 
+tax$V3 = NULL
+
+t = tax$V2 |> str_split("\\;", simplify = TRUE) |> as.data.frame() |> setDT()
+
+tax$V2 = NULL
+
+tax = cbind(tax, t)
 
 colnames(tax) = c("seqid", "kingdom", "phylum", "class", "order", "family", "genus", "species")
+
+tax$seqid = tax$seqid |> str_sub(2, -1)
 
 for(i in 2:ncol(tax)) {
     
@@ -55,6 +69,6 @@ tax$taxon_rank = ifelse(
 
 
 
-fwrite(tax, "dbs/UNITE/20240424/UNITE_public_all_21.04.2024_taxonomy.tax", row.names = FALSE, quote = FALSE, sep = "\t")
+fwrite(tax, "dbs/UNITE/20240424/r-curation/ITS.tax", row.names = FALSE, quote = FALSE, sep = "\t")
 
 

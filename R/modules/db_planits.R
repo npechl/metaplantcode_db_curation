@@ -8,12 +8,16 @@
 library(data.table)
 library(stringr)
 
+library(seqinr)
+
 # tax files --------------------
 
-fls = "dbs/CALEDNA/" |> list.files(full.names = TRUE, pattern = "txt")
+dir.create("dbs/PLANITS/20200329/r-curation", showWarnings = FALSE)
 
+fls = "dbs/PLANITS/20200329/" |> list.files(full.names = TRUE, pattern = "tsv") |> sort()
+fas = "dbs/PLANITS/20200329/" |> list.files(full.names = TRUE, pattern = "fasta") |> sort()
 
-clean_caledna <- function(path) {
+clean_planits <- function(path) {
     
     x = path |> fread(sep = "\t", quote = "", fill = TRUE, header = FALSE)
     
@@ -21,11 +25,15 @@ clean_caledna <- function(path) {
     
     y = x$taxonomy |> str_split("\\;", simplify = TRUE) |> as.data.table()
     
-    colnames(y) = c("kingdom", "phylum", "class", "order", "family", "genus", "species")
+    y$kingdom = ifelse(y$V1 == "Chlorophyta", "Viridiplantae", "Plantae")
+    
+    colnames(y) = c("phylum", "class", "order", "family", "genus", "species", "kingdom")
     
     x$taxonomy = NULL
     
     x = cbind(x, y)
+    
+    x = x[, c("seqid", "kingdom", "phylum", "class", "order", "family", "genus", "species"), with = FALSE]
     
     x = x |> lapply(function(q) { ifelse(q == "NA", NA, q) }) |> setDT()
     
@@ -69,9 +77,16 @@ clean_caledna <- function(path) {
 
 # workflow -----------------------
 
-for(i in fls) {
+for(i in seq_along(fls)) {
     
-    q = clean_caledna(i)
+    q = fls[i] |> clean_planits()
+    f = fas[i] |> read.fasta()
     
-    fwrite(q, paste0(str_sub(i, 1, -4), "tax"), row.names = FALSE, quote = FALSE, sep = "\t")
+    marker = fls[i] |> basename() |> str_split_i("\\.", 1)
+    
+    names(f) = paste0(names(f), "_", marker)
+    q$seqid  = paste0(q$seqid, "_", marker)
+    
+    write.fasta(f, names(f) |> as.list(), file.out = paste0("dbs/PLANITS/20200329/r-curation/", marker, ".fasta"), nbchar = 120)
+    fwrite(q, paste0("dbs/PLANITS/20200329/r-curation/", marker, ".tax"), row.names = FALSE, quote = FALSE, sep = "\t")
 }

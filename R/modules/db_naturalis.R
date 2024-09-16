@@ -71,13 +71,13 @@ clean_naturalis <- function(path) {
     
 }
 
+dir.create("dbs/inhouse/NATURALIS/r-curation")
 
-
-p = "dbs/inhouse/NATURALIS/rbcL1-arch.tax"
+p = "dbs/inhouse/NATURALIS/ITS2-arch.tax"
 
 tax = clean_naturalis(p)
 
-fwrite(tax, paste0(dirname(p), "/rbcL1.tax"), row.names = FALSE, quote = FALSE, sep = "\t")
+fwrite(tax, paste0("dbs/inhouse/NATURALIS/r-curation/ITS2.tax"), row.names = FALSE, quote = FALSE, sep = "\t")
 
 
 

@@ -10,10 +10,12 @@ library(stringr)
 
 # tax files --------------------
 
-fls = "dbs/PLANITS/20200329/" |> list.files(full.names = TRUE, pattern = "tsv")
+fls = "dbs/CALEDNA/" |> list.files(full.names = TRUE, pattern = "txt") |> sort()
+fas = "dbs/CALEDNA/" |> list.files(full.names = TRUE, pattern = "fasta") |> sort()
 
+dir.create("dbs/CALEDNA/r-curation", showWarnings = FALSE)
 
-clean_planits <- function(path) {
+clean_caledna <- function(path) {
     
     x = path |> fread(sep = "\t", quote = "", fill = TRUE, header = FALSE)
     
@@ -21,7 +23,7 @@ clean_planits <- function(path) {
     
     y = x$taxonomy |> str_split("\\;", simplify = TRUE) |> as.data.table()
     
-    colnames(y) = c("phylum", "class", "order", "family", "genus", "species")
+    colnames(y) = c("kingdom", "phylum", "class", "order", "family", "genus", "species")
     
     x$taxonomy = NULL
     
@@ -69,9 +71,20 @@ clean_planits <- function(path) {
 
 # workflow -----------------------
 
-for(i in fls) {
+library(seqinr)
+
+for(i in seq_along(fls)) {
     
-    q = clean_planits(i)
+    marker = fls[i] |> basename() |> str_sub(1, -5)
     
-    fwrite(q, paste0(str_sub(i, 1, -4), "tax"), row.names = FALSE, quote = FALSE, sep = "\t")
+    q = fls[i] |> clean_caledna()
+    
+    q = q[which(phylum %in% c("Streptophyta", "Chlorophyta", "Bacillariophyta", "Rhodophyta"))]
+    
+    f = fas[i] |> read.fasta()
+    f = f[q$seqid]
+    
+    write.fasta(f, names(f) |> as.list(), file.out = paste0("dbs/CALEDNA/r-curation/", marker, ".fasta"), nbchar = 120)
+    
+    fwrite(q, paste0("dbs/CALEDNA/r-curation/", marker, ".tax"), row.names = FALSE, quote = FALSE, sep = "\t")
 }

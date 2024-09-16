@@ -1,6 +1,8 @@
 
 
 
+
+
 # load libraries -------------------
 
 library(data.table)
@@ -8,10 +10,10 @@ library(stringr)
 
 library(insect)
 
-# helper functions --------------------
+dir.create("dbs/EMBL/r-curation")
 
-extract_arctic <- function(path) {
-    
+
+extract_embl <- function(path) {
     
     reads <- path |> readLines()
     reads <- reads[which(str_sub(reads, 1, 1) == ">")] |> str_sub(2, -1)
@@ -29,7 +31,6 @@ extract_arctic <- function(path) {
             arc_names = q |> str_split_i("\\=", 1) 
             arc_names = ifelse(duplicated(arc_names), paste0(arc_names, arc_names |> rowid(prefix = "_")), arc_names)
             
-            
             q = q |> str_split_i("\\=", 2) |> t() |> as.data.table()
             
             colnames(q) = arc_names
@@ -46,10 +47,9 @@ extract_arctic <- function(path) {
     
 }
 
-# workflow -----------------------
+p   <- "dbs/EMBL/trnL.fasta"
+tax <- extract_embl(p)
 
-p   <- "dbs/ARCTIC/trnL.fasta"
-tax <- extract_arctic(p)
 
 
 taxonomy_ncbi = taxonomy()
@@ -67,10 +67,32 @@ tax$species = NULL
 
 tax = cbind(tax, l[, 2:ncol(l)])
 
-colnames(tax)[c(1, 5, 6)] = c("seqid", "taxon_name", "taxon_rank")
+colnames(tax)[c(1, 4, 9)] = c("seqid", "taxon_name", "taxon_rank")
 
 tax$taxon_name = ifelse(is.na(tax$taxon_name), tax$species, tax$taxon_name)
 tax$taxon_rank = ifelse(is.na(tax$taxon_rank), "species", tax$taxon_rank)
 
+tax = tax[which(kingdom == "Viridiplantae"), c(
+    "seqid", "kingdom", "phylum", "class", "order", "family", "genus", "species",
+    "taxon_name",  "taxid", "taxon_rank",
+    "count",           "merged_taxid",     "family_name",                                              
+    "reverse_match",   "scientific_name",                                          
+    "forward_error",   "forward_tm",       "genus_name",                                              
+    "seq_length_ori",  "forward_match",    "reverse_tm",                                              
+    "reverse_error",   "strand",           "info",                                                    
+    "info_2",          "info_3",           "info_4",                                                  
+    "info_5",          "info_6",           "info_7",                                                  
+    "Hypnum hamulosum partial tRNA-Leu gene, specimen_voucher",
+    "Corynebacterium doosanense CAU 212 ",
+    "Vibrio vulnificus NBRC 15645 "                           
+                                                       
+                                                       
+    
+), with = FALSE]
 
-fwrite(tax, paste0(dirname(p), "/trnL.tax"), row.names = FALSE, quote = FALSE, sep = "\t")
+f = read.fasta("dbs/EMBL/trnL.fasta")
+f = f[tax$seqid]
+
+write.fasta(f, names(f) |> as.list(), "dbs/EMBL/r-curation/trnL.fasta", nbchar = 120)
+fwrite(tax, "dbs/EMBL/r-curation/trnL.tax", row.names = FALSE, quote = FALSE, sep = "\t")
+
