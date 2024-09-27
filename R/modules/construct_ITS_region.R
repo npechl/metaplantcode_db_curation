@@ -1,5 +1,5 @@
 
-
+library(seqinr)
 
 concatITS <- function(its1, s58, its2) {
     
@@ -28,9 +28,9 @@ concatITS <- function(its1, s58, its2) {
     
 }
 
-its1 = "dbs/PLANITS/20200329/itsx/planits.ITS1.fasta"
-s58  = "dbs/PLANITS/20200329/itsx/planits.5_8S.fasta"
-its2 = "dbs/PLANITS/20200329/itsx/planits.ITS2.fasta"
+its1 = "dbs/UNITE/20240424/itsx/unite.ITS1.fasta"
+s58  = "dbs/UNITE/20240424/itsx/unite.5_8S.fasta"
+its2 = "dbs/UNITE/20240424/itsx/unite.ITS2.fasta"
 
 outdir <- its1 |> dirname()
 
